@@ -11,7 +11,7 @@ __pycache__/
 .ipynb_checkpoints
 
 # Data files
-/data
+**/data/
 
 # Logs
 *.log
@@ -25,9 +25,6 @@ Thumbs.db
 .env/
 venv/
 env/
-
-# Jupyter Notebook
-*.ipynb
 
 # PyCharm
 .idea/
