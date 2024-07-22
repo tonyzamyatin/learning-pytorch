@@ -28,3 +28,7 @@ env/
 
 # PyCharm
 .idea/
+
+# PyTorch
+.pth
+.pt
