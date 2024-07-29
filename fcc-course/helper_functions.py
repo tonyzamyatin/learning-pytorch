@@ -1,11 +1,13 @@
 """
 A series of helper functions used throughout the course.
+(made by course creator, augmented by me)
 
 If a function gets defined once and could be used over and over, it'll go in here.
 """
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 from torch import nn
 
@@ -170,7 +172,7 @@ def plot_loss_curves(results):
 
 # Pred and plot image function from notebook 04
 # See creation: https://www.learnpytorch.io/04_pytorch_custom_datasets/#113-putting-custom-image-prediction-together-building-a-function
-from typing import List
+from typing import List, Dict, Tuple
 import torchvision
 
 
@@ -300,7 +302,8 @@ def download_data(source: str,
     return image_path
 
 
-# Custom helper functions
+# CUSTOM HELPER FUNCTIONS by Tony
+
 def accuracy_fn(y_pred, y_true):
     correct = torch.eq(y_true, y_pred).sum().item()
     acc = (correct / len(y_pred)) * 100
@@ -342,3 +345,112 @@ def fit(epochs, model, loss_fn, opt, train_dl, test_dl, acc_fn):
                 test_acc = np.sum((np.multiply(batch_acc, batch_sizes))) / np.sum(batch_sizes)
 
             print(f"Epoch {epoch}: test loss {test_loss:.5f}, accuracy {test_acc:.2f}")
+
+def plot_confusion_matrix(confusion_matrix: torch.Tensor, class_names: List[str]):
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    # Using a custom colormap similar to the torchmetrics one
+    cmap = sns.color_palette("Spectral", as_cmap=True)
+
+    sns.heatmap(confusion_matrix.cpu().numpy(), annot=True, fmt='d', cmap=cmap, ax=ax,
+                cbar=False, xticklabels=class_names, yticklabels=class_names)
+    ax.set_xlabel('Predicted class', fontsize=14)
+    ax.set_ylabel('True class', fontsize=14)
+    ax.set_title('Confusion Matrix', fontsize=18)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.show()
+
+
+def get_mnist_class_count(dataset: torchvision.datasets.MNIST):
+    """
+    Count the classes of an MNIST dataset.
+    :param dataset: A dataset subclassing `torchvision.datasets.mnist.MNIST`
+    :return: a dictionary of the class names and their frequency in the dataset
+    """
+    class_count = {name: 0 for name in dataset.classes}
+    for img, label in dataset:
+        class_count[dataset.classes[label]] += 1
+
+    return class_count
+
+
+def eval_model(model: torch.nn.Module,
+               data_loader: torch.utils.data.DataLoader,
+               loss_fn: torch.nn.Module,
+               metrics: Dict[str, torchmetrics.Metric]) -> float:
+    """
+    Evaluates the model on the provided data_loader using the specified loss function and metrics.
+    The function operates directly on the metrics and does not reset them such that the commuted metrics can be accessed though the references in the dictionary passed to this function.
+    Note that model, data_loader and metrics have to be on the same device!
+
+    Args:
+        model (torch.nn.Module): The model to be evaluated.
+        data_loader (torch.utils.data.DataLoader): The data loader for the evaluation dataset.
+        loss_fn (torch.nn.Module): The loss function to compute the loss.
+        metrics (Dict[str, torchmetrics.Metric]): A dictionary of metrics to compute during evaluation.
+
+    Returns:
+        float: The average loss of the model on the dataset
+    """
+
+    model.eval()
+    loss_total = 0.0
+
+    with torch.inference_mode():
+        for batch, (Xb, yb) in enumerate(data_loader):
+            yb_pred = model(Xb)
+            batch_loss = loss_fn(yb_pred, yb)
+            loss_total += batch_loss.item()
+
+            for metric in metrics.values():
+                metric.update(yb_pred, yb)
+
+    loss_avg = loss_total / len(data_loader) if len(data_loader) > 0 else 0.0
+
+    return loss_avg
+
+def print_eval_metrics(loss: float, metrics: Dict[str, torch.Tensor]):
+    print(f"Loss: {loss:.4f}")
+    for name, metric in metrics.items():
+        if not isinstance(metric, torchmetrics.ConfusionMatrix):
+            print(f"{name.capitalize()}: {metric.item():.4f}")
+
+
+def run_epoch(model: torch.nn.Module,
+              data_loader: torch.utils.data.DataLoader,
+              loss_fn: torch.nn.Module,
+              optimizer: torch.optim.Optimizer = None,
+              metric_tracker: torchmetrics.wrappers.MetricTracker = None,
+              device: torch.device = "cpu") -> Tuple[float, torchmetrics.wrappers.MetricTracker]:
+    """
+    Performs one epoch in a training or testing loop
+    :param model: the model to run
+    :param data_loader: the data loader of the data set
+    :param optimizer: the optimizer to use. If `None` the model won't update gradients or the model's weights (e.g., testing)
+    :param metric_tracker: a `torchmetrics.MetricTracker` of the metrics to compute
+    :param device: optional, the device to perform the computations on. Will use `cpu` per default
+    :return: the average loss of the model and the metric tracker with the updated metrics (on the specified device) for the whole dataset
+    """
+    loss_total = 0.0
+    metric_tracker = metric_tracker.to(device)
+    is_training = optimizer is not None
+
+    model.train() if is_training else model.eval()
+    with torch.inference_mode(not is_training):
+        metric_tracker.increment()
+        for batch, (X, y) in enumerate(data_loader):
+            X, y = X.to(device), y.to(device)
+            logits = model(X)
+            loss = loss_fn(logits, y)
+            loss_total += loss.item()
+
+            if metric_tracker is not None:
+                metric_tracker.update(logits, y)
+
+            if is_training:
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+    return loss_total / len(data_loader), metric_tracker
