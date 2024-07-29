@@ -379,7 +379,8 @@ def get_mnist_class_count(dataset: torchvision.datasets.MNIST):
 def eval_model(model: torch.nn.Module,
                data_loader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
-               metrics: Dict[str, torchmetrics.Metric]) -> float:
+               metrics: torchmetrics.MetricCollection,
+               device: str="cpu") -> Tuple[float, torchmetrics.MetricCollection]:
     """
     Evaluates the model on the provided data_loader using the specified loss function and metrics.
     The function operates directly on the metrics and does not reset them such that the commuted metrics can be accessed though the references in the dictionary passed to this function.
@@ -389,27 +390,29 @@ def eval_model(model: torch.nn.Module,
         model (torch.nn.Module): The model to be evaluated.
         data_loader (torch.utils.data.DataLoader): The data loader for the evaluation dataset.
         loss_fn (torch.nn.Module): The loss function to compute the loss.
-        metrics (Dict[str, torchmetrics.Metric]): A dictionary of metrics to compute during evaluation.
-
+        metrics (torchmetrics.MetricCollection): The metrics to compute during evaluation.
+        device: the device to perform the computation on
     Returns:
         float: The average loss of the model on the dataset
+        torchmetrics.MetricCollection: the updated metrics on dataset (on the specified device)
     """
+    model.to(device)
+    updated_metrics = metrics.to(device)
 
     model.eval()
     loss_total = 0.0
-
     with torch.inference_mode():
         for batch, (Xb, yb) in enumerate(data_loader):
+            Xb, yb = Xb.to(device), yb.to(device)
             yb_pred = model(Xb)
             batch_loss = loss_fn(yb_pred, yb)
             loss_total += batch_loss.item()
 
-            for metric in metrics.values():
-                metric.update(yb_pred, yb)
+            updated_metrics.update()
 
     loss_avg = loss_total / len(data_loader) if len(data_loader) > 0 else 0.0
 
-    return loss_avg
+    return loss_avg, updated_metrics
 
 def print_eval_metrics(loss: float, metrics: Dict[str, torch.Tensor]):
     """
