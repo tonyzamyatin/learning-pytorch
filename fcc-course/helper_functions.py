@@ -8,6 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import torchmetrics
 
 from torch import nn
 
@@ -411,10 +412,14 @@ def eval_model(model: torch.nn.Module,
     return loss_avg
 
 def print_eval_metrics(loss: float, metrics: Dict[str, torch.Tensor]):
+    """
+    Prints the loss and evaluation metrics to the console.
+    :param loss: the loss of the model
+    :param metrics: a dictionary of metrics with the metric names as keys and single-value tensors as values.
+    """
     print(f"Loss: {loss:.4f}")
     for name, metric in metrics.items():
-        if not isinstance(metric, torchmetrics.ConfusionMatrix):
-            print(f"{name.capitalize()}: {metric.item():.4f}")
+        print(f"{name.capitalize()}: {metric.item():.4f}")
 
 
 def run_epoch(model: torch.nn.Module,
