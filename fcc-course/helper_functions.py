@@ -408,7 +408,7 @@ def eval_model(model: torch.nn.Module,
             batch_loss = loss_fn(yb_pred, yb)
             loss_total += batch_loss.item()
 
-            updated_metrics.update()
+            updated_metrics.update(yb_pred, yb)
 
     loss_avg = loss_total / len(data_loader) if len(data_loader) > 0 else 0.0
 
