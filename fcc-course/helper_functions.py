@@ -464,25 +464,31 @@ def run_epoch(model: torch.nn.Module, data_loader: torch.utils.data.DataLoader, 
 def train_test_loop(model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer, train_dataloader: torch.utils.data
                     .DataLoader, test_dataloader: torch.utils.data.DataLoader,
                     epochs: int, device: torch.device = "cpu", train_metric_tracker: torchmetrics.MetricTracker = None, test_metric_tracker:
-        torchmetrics.MetricTracker = None):
+        torchmetrics.MetricTracker = None) -> Tuple[List[float], List[float], torchmetrics.MetricTracker, torchmetrics.MetricTracker]:
     """
     Training testing loop.
     """
+    train_losses = []
+    test_losses = []
     for epoch in tqdm(range(epochs)):
         if epoch == 0:
             print('================================')
         print(f"\nEPOCH {epoch + 1}")
         print('--------------------------------')
         train_loss, train_metric_tracker = run_epoch(model, train_dataloader, loss_fn, train_metric_tracker, device, optimizer)
+        train_losses.append(train_loss)
         computed_train_metrics = train_metric_tracker.compute()
         print('--------------------------------')
         print("TRAINING EVAL")
         print_eval_metrics(train_loss, computed_train_metrics)
 
         test_loss, test_metric_tracker = run_epoch(model, test_dataloader, loss_fn, test_metric_tracker, device)
+        test_losses.append(test_loss)
         computed_test_metrics = test_metric_tracker.compute()
         print('--------------------------------')
         print("TEST EVAL")
         print_eval_metrics(test_loss, computed_test_metrics)
+
+    return train_losses, test_losses, train_metric_tracker, test_metric_tracker
 
 
