@@ -461,8 +461,8 @@ def run_epoch(model: torch.nn.Module, data_loader: torch.utils.data.DataLoader, 
     return loss_total / len(data_loader), metric_tracker
 
 
-def train_test_loop(model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer, train_data_loader: torch.utils.data
-                    .DataLoader, test_data_loader: torch.utils.data.DataLoader,
+def train_test_loop(model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer, train_dataloader: torch.utils.data
+                    .DataLoader, test_dataloader: torch.utils.data.DataLoader,
                     epochs: int, device: torch.device = "cpu", train_metric_tracker: torchmetrics.MetricTracker = None, test_metric_tracker:
         torchmetrics.MetricTracker = None):
     """
@@ -471,12 +471,12 @@ def train_test_loop(model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer:
     for epoch in tqdm(range(epochs)):
         print(f"\nEPOCH {epoch + 1}")
         print("-------------")
-        train_loss, train_metric_tracker = run_epoch(model, train_data_loader, loss_fn, train_metric_tracker, device, optimizer)
+        train_loss, train_metric_tracker = run_epoch(model, train_dataloader, loss_fn, train_metric_tracker, device, optimizer)
         computed_train_metrics = train_metric_tracker.compute()
         print("TRAINING EVAL")
         print_eval_metrics(train_loss, computed_train_metrics)
 
-        test_loss, test_metric_tracker = run_epoch(model, test_data_loader, loss_fn, test_metric_tracker, device)
+        test_loss, test_metric_tracker = run_epoch(model, test_dataloader, loss_fn, test_metric_tracker, device)
         computed_test_metrics = test_metric_tracker.compute()
         print("TEST EVAL")
         print_eval_metrics(test_loss, computed_test_metrics)
