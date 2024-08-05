@@ -469,15 +469,19 @@ def train_test_loop(model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer:
     Training testing loop.
     """
     for epoch in tqdm(range(epochs)):
+        if epoch == 0:
+            print('================================')
         print(f"\nEPOCH {epoch + 1}")
-        print("-------------")
+        print('--------------------------------')
         train_loss, train_metric_tracker = run_epoch(model, train_dataloader, loss_fn, train_metric_tracker, device, optimizer)
         computed_train_metrics = train_metric_tracker.compute()
+        print('--------------------------------')
         print("TRAINING EVAL")
         print_eval_metrics(train_loss, computed_train_metrics)
 
         test_loss, test_metric_tracker = run_epoch(model, test_dataloader, loss_fn, test_metric_tracker, device)
         computed_test_metrics = test_metric_tracker.compute()
+        print('--------------------------------')
         print("TEST EVAL")
         print_eval_metrics(test_loss, computed_test_metrics)
 
